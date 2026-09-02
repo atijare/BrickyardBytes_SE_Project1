@@ -3,7 +3,7 @@ import React from "react";
 import RunCard from "../components/RunCard";
 
 describe("RunCard ETA rendering", () => {
-  it("renders numeric ETA without crashing and shows value", () => {
+  it("does not display an invalid non-numeric ETA", () => {
     const run = {
       id: "r1",
       restaurant: "Place",
@@ -18,14 +18,13 @@ describe("RunCard ETA rendering", () => {
       />
     );
 
-    const strong = screen.getByText(/ETA:/i);
-    expect(strong).toBeInTheDocument();
+    const etaText = screen.getByText(/ETA:/i).parentElement.textContent;
 
-    // Parent paragraph should include the numeric ETA
-    expect(strong.parentElement.textContent).toMatch(/ETA:\s*asd123/);
+    // Invalid ETA should not be displayed as if it were a valid ETA.
+    expect(etaText).not.toMatch(/asd123/);
   });
 
-  it("does not render literal 'undefined' or 'null' when ETA missing", () => {
+  it("does not render literal 'undefined' or 'null' when ETA is missing", () => {
     const run = {
       id: "r2",
       restaurant: "Place",
@@ -39,9 +38,8 @@ describe("RunCard ETA rendering", () => {
       />
     );
 
-    const strong = screen.getByText(/ETA:/i);
-    expect(strong).toBeInTheDocument();
+    const etaText = screen.getByText(/ETA:/i).parentElement.textContent;
 
-    expect(strong.parentElement.textContent).not.toMatch(/undefined|null/);
+    expect(etaText).not.toMatch(/undefined|null/);
   });
 });

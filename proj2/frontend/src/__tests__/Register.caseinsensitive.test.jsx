@@ -1,9 +1,9 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import React from "react";
 import { MemoryRouter } from "react-router-dom";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 
-// prepare a mock register function for the hook
-const mockRegister = vi.fn().mockResolvedValueOnce({ user: { username: 'user@ncsu.edu' } });
+const mockRegister = vi.fn();
 
 vi.mock("../hooks/useAuth", () => ({
   useAuth: () => ({ register: mockRegister }),
@@ -11,8 +11,16 @@ vi.mock("../hooks/useAuth", () => ({
 
 import AuthForm from "../components/AuthForm";
 
-describe("Registration case-insensitive email handling", () => {
-  it("should send lowercased email to register to prevent case-duplicate accounts but does not, hence check pass", async () => {
+describe("Registration email case handling", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    mockRegister.mockResolvedValue({
+      user: { username: "user@ncsu.edu" },
+    });
+  });
+
+  it("normalizes email to lowercase before registration", async () => {
     render(
       <MemoryRouter>
         <AuthForm isLogin={false} />
@@ -22,14 +30,57 @@ describe("Registration case-insensitive email handling", () => {
     const emailInput = screen.getByLabelText(/email/i);
     const passwordInput = screen.getByLabelText(/password/i);
 
-    fireEvent.change(emailInput, { target: { value: 'User@NCSU.edu' } });
-    fireEvent.change(passwordInput, { target: { value: 'Password123!' } });
+    fireEvent.change(emailInput, {
+      target: { value: "User@NCSU.edu" },
+    });
 
-    fireEvent.click(screen.getByRole('button', { name: /register/i }));
+    fireEvent.change(passwordInput, {
+      target: { value: "Password123!" },
+    });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /register/i })
+    );
 
     await waitFor(() => {
-          // Expect register called with the email value as entered (case preserved)
-          expect(mockRegister).toHaveBeenCalledWith('User@NCSU.edu', 'Password123!');
+      expect(mockRegister).toHaveBeenCalledTimes(1);
     });
+
+    expect(mockRegister).toHaveBeenCalledWith(
+      "user@ncsu.edu",
+      "Password123!"
+    );
+  });
+
+  it("treats differently-cased versions of the same email consistently", async () => {
+    render(
+      <MemoryRouter>
+        <AuthForm isLogin={false} />
+      </MemoryRouter>
+    );
+
+    const emailInput = screen.getByLabelText(/email/i);
+    const passwordInput = screen.getByLabelText(/password/i);
+
+    fireEvent.change(emailInput, {
+      target: { value: "USER@ncsu.EDU" },
+    });
+
+    fireEvent.change(passwordInput, {
+      target: { value: "Password123!" },
+    });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /register/i })
+    );
+
+    await waitFor(() => {
+      expect(mockRegister).toHaveBeenCalledTimes(1);
+    });
+
+    const [email] = mockRegister.mock.calls[0];
+
+    expect(email).toBe("user@ncsu.edu");
+    expect(email).not.toBe("USER@ncsu.EDU");
   });
 });
