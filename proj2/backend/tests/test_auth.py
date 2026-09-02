@@ -11,6 +11,7 @@ def test_register_login_and_me_flow(app_client):
     assert "token" in data and "user" in data
     assert data["user"]["username"] == payload["email"]
 
+
     # Duplicate register -> 409
     r_dup = app_client.post("/auth/register", json=payload)
     assert r_dup.status_code == 409

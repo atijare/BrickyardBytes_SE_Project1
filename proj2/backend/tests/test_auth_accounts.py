@@ -9,6 +9,14 @@ def test_register_rejects_non_ncsu(app_client):
     assert "NCSU" in r.text or "ncsu" in r.text
 
 
+def test_register_rejects_adversarial_input(app_client):
+    r = app_client.post(
+        "/auth/register", json={"email": "user@gmail.com", "password": "x"}
+    )
+    assert r.status_code == 400, r.text
+    assert len(r.text)<100
+
+
 def test_register_success_minimal(app_client):
     r = app_client.post(
         "/auth/register", json={"email": "alice1@ncsu.edu", "password": "Secret123!"}
